@@ -1,0 +1,25 @@
+{
+  "capabilities":
+      [
+        {
+          "browserName": "${browserName}",
+          "version":"${version}",
+          "maxInstances": 1,
+          "platform":"LINUX"
+        }
+      ],
+  "configuration":
+  {
+    "cleanUpCycle":2000,
+    "timeout":30000,
+    "proxy": "org.openqa.grid.selenium.proxy.DefaultRemoteProxy",
+    "url":"http://${appiumHost}:${appiumPort}/wd/hub",
+    "host": "${appiumHost}",
+    "port": ${appiumPort},
+    "maxSession": 1,
+    "register": true,
+    "registerCycle": 5000,
+    "hubPort": ${hubPort},
+    "hubHost": "${hubHost}"
+  }
+}

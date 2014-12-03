@@ -1,0 +1,50 @@
+#!/bin/bash
+. appmanconfig
+
+function die() {
+    echo $*
+    exit 1
+}
+
+
+function checkAdbServer() {
+    proc=`ps -ef | grep adb | grep -v grep`
+    if [[ -z "$proc" ]]; then
+        die "Android debug bridge server is not running. Use command: adb start-server"
+    fi
+}
+
+
+function getConnectedDevices() {
+    cat ${__appmanConnectedDevicesFile}
+}
+
+function getDeviceFile() {
+    echo "device-$1.device"
+}
+
+
+function updateConnectedDevicesList() {
+    adb devices | tail -n +2 | awk '{print $1}' | sed '/^$/d' > ${__appmanConnectedDevicesFile}
+}
+
+
+function readVar() {
+    printf "$1"
+    if [[ -n $3 ]]; then
+        printf " [$3]: "
+    else
+        printf ": "
+    fi
+    read input
+
+    if [[ -n $3 && -z $input ]]; then
+        input=$3
+    fi
+
+    eval "$2=\$input"
+}
+
+
+
+

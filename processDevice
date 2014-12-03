@@ -1,0 +1,12 @@
+#!/bin/bash
+. appmancore
+
+
+
+echo Processing device ${deviceId}
+
+
+
+
+
+

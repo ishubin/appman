@@ -1,0 +1,71 @@
+#!/bin/bash
+. appmanconfig
+. appmancore
+
+
+function main() {
+    checkAdbServer
+    updateConnectedDevicesList
+
+    IFS=$'\n'
+    for deviceId in `getConnectedDevices`
+    do
+        processDevice ${deviceId}
+    done
+
+}
+
+function processDevice() {
+    deviceId=$1
+    deviceFile=```getDeviceFile ${deviceId}```
+    echo Processing device ${deviceId}
+
+    if [[ -e "${deviceFile}" ]]; then
+        processExistentDevice ${deviceId}
+    else
+        processNewDevice ${deviceId}
+    fi
+}
+
+function processExistentDevice() {
+    deviceId=$1
+    echo Not yet implemented
+}
+
+
+function processNewDevice() {
+    deviceId=$1
+    read -r -p "New device ${deviceId} is connected. Would you like to configure it? [y/N] " response
+    case $response in 
+        [yY][eE][sS]|[yY]) 
+            configureNewDevice
+            ;;
+    esac
+}
+
+function findFreeAppiumPort() {
+    #TODO scan for available ports
+    echo 8000
+}
+
+function configureNewDevice() {
+    _jsonAppiumPort=`findFreeAppiumPort`
+    #TODO Put all default values in config
+    readVar "browserName"  _jsonBrowserName "ChromeOnAndroid"
+    readVar "Android version" _jsonVersion "4.1"
+    readVar "Appium server host" _jsonAppiumHost "127.0.0.1"
+    readVar "Hub host" _jsonHubHost "127.0.0.1"
+    readVar "Hub port" _jsonHubPort "4444"
+
+    cat nodeconfig-template | sed \
+        -e "s/\${browserName}/${_jsonBrowserName}/g" \
+        -e "s/\${version}/${_jsonVersion}/g" \
+        -e "s/\${appiumHost}/${_jsonAppiumHost}/g" \
+        -e "s/\${appiumPort}/${_jsonAppiumPort}/g" \
+        -e "s/\${hubHost}/${_jsonHubHost}/g" \
+        -e "s/\${hubPort}/${_jsonHubPort}/g" \
+    > device-${deviceId}-nodeconfig.json
+}
+
+
+main

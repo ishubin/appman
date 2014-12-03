@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export __appmanPortLookupStart=8300
+export __appmanPortLookupLimit=10
+export __appmanConnectedDevicesFile=.connected-devices
