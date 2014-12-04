@@ -2,7 +2,7 @@
 . appmanconfig
 
 function die() {
-    echo $*
+    >&2 echo ERROR: $*
     exit 1
 }
 
@@ -12,6 +12,18 @@ function checkAdbServer() {
     if [[ -z "$proc" ]]; then
         die "Android debug bridge server is not running. Use command: adb start-server"
     fi
+}
+
+function confirmCall() {
+    call=$1
+    question=$2
+
+    read -r -p "$question [y/N] " response
+    case $response in 
+        [yY][eE][sS]|[yY]) 
+            eval ${call}
+            ;;
+    esac
 }
 
 
@@ -43,6 +55,27 @@ function readVar() {
     fi
 
     eval "$2=\$input"
+}
+
+function findFreePort() {
+    portEnd=$((__appmanPortLookupStart+__appmanPortLookupLimit))
+    foundOpenPort=0
+
+    for port in $(seq ${__appmanPortLookupStart} ${portEnd})
+    do
+        # checking if there are any processes listening on the port
+        processUsingPort=`lsof -i:$port`
+        if [[ -z ${processUsingPort} ]]; then
+            foundOpenPort=${port}
+            break
+        fi
+    done
+
+    if [[ ${foundOpenPort} -gt 0 ]]; then
+        echo ${foundOpenPort}
+    else 
+        die "Failed find open port in range ${__appmanPortLookupStart}..${portEnd}"
+    fi
 }
 
 

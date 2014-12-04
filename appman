@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 . appmanconfig
 . appmancore
 
@@ -12,7 +13,6 @@ function main() {
     do
         processDevice ${deviceId}
     done
-
 }
 
 function processDevice() {
@@ -32,30 +32,32 @@ function processExistentDevice() {
     echo Not yet implemented
 }
 
-
 function processNewDevice() {
     deviceId=$1
-    read -r -p "New device ${deviceId} is connected. Would you like to configure it? [y/N] " response
-    case $response in 
-        [yY][eE][sS]|[yY]) 
-            configureNewDevice
-            ;;
-    esac
+    printf "\n\n"
+
+    confirmCall "configureNewDevice $deviceId" \
+        "New device ${deviceId} is connected. Would you like to configure it?"
 }
 
-function findFreeAppiumPort() {
-    #TODO scan for available ports
-    echo 8000
+
+function startDeviceNode() {
+    deviceId=$1
+
+    killDeviceProcessIfExisted $deviceId
 }
 
 function configureNewDevice() {
-    _jsonAppiumPort=`findFreeAppiumPort`
-    #TODO Put all default values in config
-    readVar "browserName"  _jsonBrowserName "ChromeOnAndroid"
-    readVar "Android version" _jsonVersion "4.1"
-    readVar "Appium server host" _jsonAppiumHost "127.0.0.1"
-    readVar "Hub host" _jsonHubHost "127.0.0.1"
-    readVar "Hub port" _jsonHubPort "4444"
+    deviceId=$1
+
+    _jsonAppiumPort=`findFreePort`
+    echo "Found open port: ${_jsonAppiumPort}"
+
+    readVar "browserName"  _jsonBrowserName "${__appmanDefault_browserName}"
+    readVar "Android version" _jsonVersion "${__appmanDefault_version}"
+    readVar "Appium server host" _jsonAppiumHost "${__appmanDefault_apppiumHost}"
+    readVar "Hub host" _jsonHubHost "${__appmanDefault_hubHost}"
+    readVar "Hub port" _jsonHubPort "${__appmanDefault_hubPort}"
 
     cat nodeconfig-template | sed \
         -e "s/\${browserName}/${_jsonBrowserName}/g" \
@@ -65,6 +67,12 @@ function configureNewDevice() {
         -e "s/\${hubHost}/${_jsonHubHost}/g" \
         -e "s/\${hubPort}/${_jsonHubPort}/g" \
     > device-${deviceId}-nodeconfig.json
+
+    echo "Device ${deviceId} is configured"
+
+    confirmCall "startDeviceNode $deviceId" \
+        "Would you like to start the newly configured device?"
+    
 }
 
 

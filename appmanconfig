@@ -1,5 +1,13 @@
 #!/bin/bash
 
-export __appmanPortLookupStart=8300
-export __appmanPortLookupLimit=10
+export __appmanPortLookupStart=8200
+export __appmanPortLookupLimit=50
 export __appmanConnectedDevicesFile=.connected-devices
+
+
+export __appmanDefault_browserName=ChromeOnAndroid
+export __appmanDefault_version=4.1
+export __appmanDefault_apppiumHost=127.0.0.1
+export __appmanDefault_hubHost=127.0.0.1
+export __appmanDefault_hubPort=4444
+
