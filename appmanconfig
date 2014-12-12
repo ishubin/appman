@@ -2,8 +2,8 @@
 
 export __appmanPortLookupStart=8200
 export __appmanPortLookupLimit=50
+export __appmanDevicesFolder=devices
 export __appmanConnectedDevicesFile=.connected-devices
-
 
 export __appmanDefault_browserName=ChromeOnAndroid
 export __appmanDefault_version=4.1

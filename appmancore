@@ -8,9 +8,18 @@ function die() {
 
 
 function checkAdbServer() {
+    set +e
     proc=`ps -ef | grep adb | grep -v grep`
     if [[ -z "$proc" ]]; then
         die "Android debug bridge server is not running. Use command: adb start-server"
+    fi
+    set -e
+}
+
+function checkDevicesFolder() {
+    if [ ! -d $__appmanDevicesFolder ]; then
+        mkdir $__appmanDevicesFolder
+        echo "Created folder $__appmanDevicesFolder"
     fi
 }
 
@@ -21,23 +30,27 @@ function confirmCall() {
     read -r -p "$question [y/N] " response
     case $response in 
         [yY][eE][sS]|[yY]) 
-            eval ${call}
+            eval $call
             ;;
     esac
 }
 
 
 function getConnectedDevices() {
-    cat ${__appmanConnectedDevicesFile}
+    cat ${__appmanDevicesFolder}/${__appmanConnectedDevicesFile}
 }
 
 function getDeviceFile() {
-    echo "device-$1.device"
+    echo "${__appmanDevicesFolder}/device-$1.device"
+}
+
+function getDeviceNodeconfigFile() {
+    echo ${__appmanDevicesFolder}/device-$1-nodeconfig.json
 }
 
 
 function updateConnectedDevicesList() {
-    adb devices | tail -n +2 | awk '{print $1}' | sed '/^$/d' > ${__appmanConnectedDevicesFile}
+    adb devices | tail -n +2 | awk '{print $1}' | sed '/^$/d' > ${__appmanDevicesFolder}/${__appmanConnectedDevicesFile}
 }
 
 
@@ -58,6 +71,8 @@ function readVar() {
 }
 
 function findFreePort() {
+    #TODO should also check if the port is not defined in device files
+
     portEnd=$((__appmanPortLookupStart+__appmanPortLookupLimit))
     foundOpenPort=0
 
@@ -78,6 +93,43 @@ function findFreePort() {
     fi
 }
 
+function checkDeviceStatus() {
+    deviceId=$1
+    
+    deviceFile=`getDeviceFile $deviceId`
+
+    pid=`cat $deviceFile | awk '{print $3}'`
+    if [ -z "$pid" ]; then
+        echo "off"
+    else 
+        if [ -z `ps -p $pid | grep $pid` ]; then
+            echo "off"
+        else 
+            echo "running"
+        fi
+    fi
+}
+
+
+function startDeviceNode() {
+    deviceId=$1
+    deviceFile=`getDeviceFile $deviceId`
+
+    echo "Starting appium node for $deviceId"
+
+    appiumHost=`cat $deviceFile | awk '{print $1}'`
+    appiumPort=`cat $deviceFile | awk '{print $2}'`
+
+    if [[ -z "$appiumHost" || -z "$appiumPort" ]]; then
+        die "file $deviceFile is corrupted"
+    fi
+
+    nohup appium  -a "$appiumHost" -p "$appiumPort" -U "$deviceId"  &
+    devicePID=$!
+
+    echo "$appiumHost $appiumPort $devicePID" > $deviceFile
+
+}
 
 
 

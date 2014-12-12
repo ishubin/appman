@@ -6,6 +6,7 @@ set -e
 
 function main() {
     checkAdbServer
+    checkDevicesFolder
     updateConnectedDevicesList
 
     IFS=$'\n'
@@ -29,7 +30,15 @@ function processDevice() {
 
 function processExistentDevice() {
     deviceId=$1
-    echo Not yet implemented
+
+    status=`checkDeviceStatus $deviceId`
+    echo Device $deviceId status is: $status
+
+    if [[ $status == "off" ]]; then
+        startDeviceNode $deviceId
+    else 
+        echo device $deviceId is running
+    fi
 }
 
 function processNewDevice() {
@@ -41,11 +50,6 @@ function processNewDevice() {
 }
 
 
-function startDeviceNode() {
-    deviceId=$1
-
-    killDeviceProcessIfExisted $deviceId
-}
 
 function configureNewDevice() {
     deviceId=$1
@@ -59,6 +63,8 @@ function configureNewDevice() {
     readVar "Hub host" _jsonHubHost "${__appmanDefault_hubHost}"
     readVar "Hub port" _jsonHubPort "${__appmanDefault_hubPort}"
 
+    nodeconfigFile=`getDeviceNodeconfigFile $deviceId`
+
     cat nodeconfig-template | sed \
         -e "s/\${browserName}/${_jsonBrowserName}/g" \
         -e "s/\${version}/${_jsonVersion}/g" \
@@ -66,13 +72,16 @@ function configureNewDevice() {
         -e "s/\${appiumPort}/${_jsonAppiumPort}/g" \
         -e "s/\${hubHost}/${_jsonHubHost}/g" \
         -e "s/\${hubPort}/${_jsonHubPort}/g" \
-    > device-${deviceId}-nodeconfig.json
+    > $nodeconfigFile
+
+    deviceFileName=`getDeviceFile $deviceId`
+    touch $deviceFileName
+    echo "$_jsonAppiumHost $_jsonAppiumPort" > $deviceFileName
 
     echo "Device ${deviceId} is configured"
 
     confirmCall "startDeviceNode $deviceId" \
         "Would you like to start the newly configured device?"
-    
 }
 
 
