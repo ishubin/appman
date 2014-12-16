@@ -1,10 +1,47 @@
 #!/bin/bash
 set -e
-. appmanconfig
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+SDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+WD=$(pwd)
+
 . appmancore
 
 
 function main() {
+
+    case $1 in 
+        init)
+            initAppmanProject
+            ;;
+        *)
+            showAllConnectedDevices
+            ;;
+    esac
+
+    exit 1
+}
+
+function loadConfig() {
+    if [ -f $WD/appmanconfig ]; then
+        . $WD/appmanconfig
+    else
+        echo Cannot read file appmanconfig
+    fi
+}
+
+function initAppmanProject() {
+    mkdir -p devices
+    cp $SDIR/appmanconfig $WD/.
+    cp $SDIR/nodeconfig-template $WD/.
+}
+
+function showAllConnectedDevices() {
+    loadConfig
     checkAdbServer
     checkDevicesFolder
     updateConnectedDevicesList
@@ -19,7 +56,6 @@ function main() {
 function processDevice() {
     deviceId=$1
     deviceFile=```getDeviceFile ${deviceId}```
-    echo Processing device ${deviceId}
 
     if [[ -e "${deviceFile}" ]]; then
         processExistentDevice ${deviceId}
@@ -32,12 +68,12 @@ function processExistentDevice() {
     deviceId=$1
 
     status=`checkDeviceStatus $deviceId`
-    echo Device $deviceId status is: $status
 
     if [[ $status == "off" ]]; then
+        echo Starting device $deviceId
         startDeviceNode $deviceId
     else 
-        echo device $deviceId is running
+        echo Device $deviceId status is: $status
     fi
 }
 
@@ -65,7 +101,7 @@ function configureNewDevice() {
 
     nodeconfigFile=`getDeviceNodeconfigFile $deviceId`
 
-    cat nodeconfig-template | sed \
+    cat $WD/nodeconfig-template | sed \
         -e "s/\${browserName}/${_jsonBrowserName}/g" \
         -e "s/\${version}/${_jsonVersion}/g" \
         -e "s/\${appiumHost}/${_jsonAppiumHost}/g" \
@@ -85,4 +121,4 @@ function configureNewDevice() {
 }
 
 
-main
+main $*
