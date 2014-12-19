@@ -34,11 +34,15 @@ function confirmCall() {
     call=$1
     question=$2
 
-    read -r -p "$question [y/N] " response
+    read -r -p "$question [Y/n] " response
     case $response in 
-        [yY][eE][sS]|[yY]) 
+        [nN][oO]|[nN])
+            break;
+            ;;
+        *)
             eval $call
             ;;
+
     esac
 }
 
@@ -51,8 +55,20 @@ function getDeviceFile() {
     echo "${__appmanDevicesFolder}/device-$1.device"
 }
 
+function getDevicePid() {
+    deviceId=$1
+    deviceFile=`getDeviceFile $deviceId`
+    if [ -f "$deviceFile" ]; then
+        cat $deviceFile | head -n 1 | awk '{print $3}'
+    fi
+}
+
 function getDeviceNodeconfigFile() {
     echo ${__appmanDevicesFolder}/device-$1-nodeconfig.json
+}
+
+function getDeviceLog() {
+    echo ${__appmanDevicesFolder}/device-$1.log
 }
 
 
@@ -109,7 +125,8 @@ function checkDeviceStatus() {
     if [ -z "$pid" ]; then
         echo "off"
     else 
-        if [ -z `ps -p $pid | grep $pid` ]; then
+        st=`ps -p $pid | grep $pid`
+        if [ -z "$st" ]; then
             echo "off"
         else 
             echo "running"
@@ -121,6 +138,7 @@ function checkDeviceStatus() {
 function startDeviceNode() {
     deviceId=$1
     deviceFile=`getDeviceFile $deviceId`
+    deviceLog=`getDeviceLog $deviceId`
 
     echo "Starting appium node for $deviceId"
 
@@ -131,11 +149,61 @@ function startDeviceNode() {
         die "file $deviceFile is corrupted"
     fi
 
-    nohup appium  -a "$appiumHost" -p "$appiumPort" -U "$deviceId"  &
+    touch $deviceLog
+    nohup appium  -a "$appiumHost" -p "$appiumPort" -U "$deviceId" > $deviceLog &
     devicePID=$!
 
     echo "$appiumHost $appiumPort $devicePID" > $deviceFile
 
+}
+
+function stopDevice() {
+    deviceId=$1
+
+    case $deviceId in 
+        all)
+            _killAllDevices
+            ;;
+        *)
+            _killDevice $deviceId
+            ;;
+    esac
+}
+
+function startDevice() {
+    deviceId=$1
+
+    case $deviceId in 
+        all)
+            _launchAllDevices
+            ;;
+        *)
+            _launchDevice $deviceId
+            ;;
+    esac
+}
+
+function _launchDevice() {
+    deviceId=$1
+    status=`checkDeviceStatus $deviceId`
+
+    if [[ $status == "off" ]]; then
+        echo Starting device $deviceId
+        startDeviceNode $deviceId
+    fi
+}
+
+function _killDevice() {
+    deviceId=$1
+    devicePID=`getDevicePid $deviceId`
+
+    if [ ! -z "$devicePID" ]; then
+        result=`ps -p $devicePID | grep "$devicePID" | grep appium`
+        if [ ! -z  "$result" ]; then
+            echo killing process $devicePID: $result
+            kill $devicePID
+        fi
+    fi
 }
 
 

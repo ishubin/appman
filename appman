@@ -9,7 +9,7 @@ done
 SDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 WD=$(pwd)
 
-. appmancore
+. $SDIR/appmancore
 
 
 function main() {
@@ -18,12 +18,17 @@ function main() {
         init)
             initAppmanProject
             ;;
+        stop)
+            menuStop $*
+            ;;
+        start)
+            menuStart $*
+            ;;
         *)
+            loadConfig
             showAllConnectedDevices
             ;;
     esac
-
-    exit 1
 }
 
 function loadConfig() {
@@ -34,6 +39,18 @@ function loadConfig() {
     fi
 }
 
+function menuStop() {
+    loadConfig
+    shift 
+    stopDevice $1
+}
+
+function menuStart() {
+    loadConfig
+    shift
+    startDevice $1
+}
+
 function initAppmanProject() {
     mkdir -p devices
     cp $SDIR/appmanconfig $WD/.
@@ -41,7 +58,6 @@ function initAppmanProject() {
 }
 
 function showAllConnectedDevices() {
-    loadConfig
     checkAdbServer
     checkDevicesFolder
     updateConnectedDevicesList
@@ -66,15 +82,8 @@ function processDevice() {
 
 function processExistentDevice() {
     deviceId=$1
-
     status=`checkDeviceStatus $deviceId`
-
-    if [[ $status == "off" ]]; then
-        echo Starting device $deviceId
-        startDeviceNode $deviceId
-    else 
-        echo Device $deviceId status is: $status
-    fi
+    echo Device $deviceId is $status
 }
 
 function processNewDevice() {
